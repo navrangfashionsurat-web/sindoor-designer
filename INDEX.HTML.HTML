@@ -1,0 +1,1400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>SINDOOR ORDERS DISPATCH</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  :root{
+    --paper:#FAF9F5; --panel:#FFFFFF; --ink:#2A2331; --ink-soft:#5B5468; --ink-faint:#928C9E;
+    --line:#E7E2D9; --plum:#241B2F; --plum-soft:#3A2E4A; --marigold:#E0982B; --marigold-soft:#FBEBD2;
+    --teal:#2F8F7B; --teal-soft:#E1F2EE; --vermillion:#C94A3D; --vermillion-soft:#FBE4E1;
+    --gold:#B8860B; --gold-soft:#FBF3D8; --orange:#D9740E; --orange-soft:#FCE7D0; --wine:#83254F; --wine-soft:#F6E4EC;
+    --note-bg:#FBEFDD; --note-text:#5B4321;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;margin:0;}
+  body{font-family:'Inter',sans-serif;background:var(--paper);color:var(--ink);-webkit-font-smoothing:antialiased;}
+  .tabular{font-variant-numeric:tabular-nums;}
+  h1,h2,h3,.disp{font-family:'Space Grotesk',sans-serif;}
+  ::-webkit-scrollbar{width:8px;height:8px;}
+  ::-webkit-scrollbar-thumb{background:var(--line);border-radius:8px;}
+
+  .shell{display:flex;height:calc(100vh / 0.97);zoom:0.97;}   /* pura page 3% chhota (receipt/print par asar nahi) */
+  .rail{width:60px;background:var(--plum);flex-shrink:0;display:flex;flex-direction:column;align-items:center;padding:16px 0;gap:16px;}
+  .rail .mark{width:32px;height:32px;border-radius:9px;background:var(--marigold);display:flex;align-items:center;justify-content:center;font-family:'Space Grotesk';font-weight:700;color:var(--plum);font-size:13px;margin-bottom:6px;}
+  .rail .ricon{width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;color:#C9C2D6;font-size:18px;cursor:pointer;}
+  .rail .ricon.active{background:rgba(224,152,43,0.18);color:var(--marigold);}
+
+  .main{flex:1;display:flex;flex-direction:column;min-width:0;}
+  .topbar{height:40px;flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:0 20px;border-bottom:1px solid var(--line);background:var(--panel);}
+  .topbar h1{font-size:15px;font-weight:700;margin:0;letter-spacing:0.01em;color:var(--marigold);}
+  .topbar-right{display:flex;align-items:center;gap:10px;}
+  .sync-pill{font-size:10.5px;font-weight:600;padding:3px 10px;border-radius:20px;display:flex;align-items:center;gap:5px;}
+  .sync-pill.demo{background:var(--orange-soft);color:var(--orange);}
+  .sync-pill.live{background:var(--teal-soft);color:var(--teal);}
+  .sync-pill.err{background:var(--vermillion-soft);color:var(--vermillion);}
+  .clock{font-size:11px;color:var(--ink-faint);}
+
+  .view{display:none;flex:1;min-height:0;flex-direction:column;}
+  .view.active{display:flex;}
+
+  .stage{flex:1;overflow:hidden;display:flex;flex-direction:column;padding:12px 16px;gap:10px;min-height:0;}
+
+  /* Delay strip: har party ek baar, naam jitna colour box. Sab party dikhti hain (line badhti jaati hai), koi chhutti nahi. */
+  .strip{display:flex;flex-wrap:wrap;align-content:flex-start;gap:6px 8px;overflow-y:auto;overflow-x:hidden;flex-shrink:0;max-height:30vh;padding-bottom:2px;}
+  .pbox{display:flex;align-items:center;justify-content:center;height:30px;padding:0 14px;flex:0 0 auto;border-radius:9px;font-size:13px;font-weight:800;white-space:nowrap;cursor:pointer;border:1px solid transparent;line-height:1;user-select:none;}
+  .pbox:active{transform:scale(0.97);}
+  .pbox.c0{background:var(--marigold-soft);color:#95610F;border-color:rgba(224,152,43,0.35);}
+  .pbox.c1{background:var(--teal-soft);color:var(--teal);border-color:rgba(47,143,123,0.35);}
+  .pbox.c2{background:var(--wine-soft);color:var(--wine);border-color:rgba(131,37,79,0.30);}
+  .pbox.c3{background:var(--gold-soft);color:#8A6408;border-color:rgba(184,134,11,0.35);}
+  .pbox.c4{background:var(--vermillion-soft);color:var(--vermillion);border-color:rgba(201,74,61,0.30);}
+  .pbox.c5{background:var(--orange-soft);color:var(--orange);border-color:rgba(217,116,14,0.35);}
+
+  .split{flex:1;display:flex;gap:14px;min-height:0;}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden;display:flex;flex-direction:column;}
+  .detail{flex:1.6;min-width:0;}
+  .listpanel{flex:1;min-width:320px;max-width:400px;}
+
+  .detail-body{flex:1;overflow-y:auto;padding:14px 18px 24px;}
+
+  .order-sep{display:flex;align-items:center;gap:10px;margin:22px 0 16px;}
+  .order-sep .num{width:30px;height:30px;border-radius:50%;background:var(--marigold);color:#2A1B03;font-weight:800;font-size:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .order-sep .oline{flex:1;height:2px;background:var(--line);}
+  .order-sep .lbl{font-size:11.5px;font-weight:700;color:var(--ink-soft);text-transform:uppercase;letter-spacing:0.04em;white-space:nowrap;}
+
+  .oc-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:2px;}
+  .oc-party{font-size:22px;font-weight:800;margin:0;letter-spacing:-0.01em;color:#6E1140;display:inline-block;padding-bottom:3px;border-bottom:2.5px solid var(--gold);}
+  .oc-sr{font-size:12px;color:var(--ink-faint);font-weight:500;}
+  .oc-sub{font-size:14.5px;font-weight:600;color:var(--ink);margin:0 0 10px;}
+  .oc-sub .fab{font-weight:500;color:var(--ink-soft);}
+  .oc-designfab{display:flex;flex-wrap:wrap;gap:16px;margin:9px 0 10px;}
+  .chip-des{background:var(--gold-soft);color:#D62828;font-weight:700;font-size:15.2px;padding:4px 11px;border-radius:7px;}
+  .dno-label{font-size:9.5px;font-weight:400;color:#8A8494;opacity:0.85;margin-right:3px;letter-spacing:0.02em;}
+  .chip-fab{background:var(--wine-soft);color:var(--wine);font-weight:700;font-size:13.5px;padding:4px 11px;border-radius:7px;}
+
+  .rates{display:flex;gap:8px;margin-bottom:11px;}
+  .rate-chip{padding:7px 13px;border-radius:9px;border:1px solid rgba(0,0,0,0.05);}
+  .rate-chip .rl{font-size:9.5px;opacity:0.75;margin:0 0 1px;}
+  .rate-chip .rv{font-size:14px;font-weight:700;margin:0;}
+  .rate-chip.y{background:var(--gold-soft);color:#8A6408;}
+  .rate-chip.r{background:var(--vermillion-soft);color:var(--vermillion);padding:7px 15px;}
+  .rate-chip.r .rv{font-size:17px;}
+
+  .meta-line-top{font-size:12.5px;color:var(--ink-soft);margin-bottom:12px;display:flex;flex-wrap:wrap;align-items:center;gap:0;}
+  .meta-line-top .mi{margin-right:14px;}
+  .meta-line-top .mi b{color:var(--ink);font-weight:700;}
+  .meta-line-top .mi-orderno{font-size:15.5px;}
+  .meta-line-top .mi-orderno b{font-size:16.5px;color:var(--wine);}
+
+  .stat-chip{display:inline-flex;align-items:center;gap:5px;padding:4px 11px;border-radius:20px;margin-right:8px;}
+  .stat-chip .cl{font-size:10.5px;text-transform:uppercase;letter-spacing:0.02em;opacity:0.8;font-weight:700;}
+  .stat-chip .cv{font-size:15.5px;font-weight:800;}
+  .stat-chip.pcs{background:var(--marigold-soft);color:#95610F;}
+  .stat-chip.cut{background:var(--teal-soft);color:var(--teal);}
+  .stat-chip.mtr{background:var(--wine-soft);color:var(--wine);}
+
+  .note-mini{background:var(--note-bg);color:var(--note-text);border-radius:9px;padding:11px 14px;font-size:13.5px;font-weight:700;line-height:1.55;margin-bottom:13px;border:1px solid rgba(0,0,0,0.04);}
+  .note-mini b{color:var(--wine);display:block;font-size:10.5px;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:3px;}
+
+  .entry-label{font-size:12px;font-weight:600;margin:0 0 7px;color:var(--ink-soft);}
+  .entry-h-wrap{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;}
+  .entry-h-item{display:flex;flex-direction:column;gap:3px;}
+  .entry-h-item .tag{font-size:10px;color:var(--ink-faint);}
+  .entry-h-item input{width:74px;}
+  .entry-h-item input.manual{width:104px;border-color:var(--marigold);background:var(--marigold-soft);}
+  .entry-h-item{position:relative;}
+  .entry-h-item .rm{position:absolute;top:-4px;right:-5px;width:16px;height:16px;border-radius:50%;border:none;background:var(--vermillion);color:#fff;font-size:11px;line-height:16px;padding:0;cursor:pointer;}
+  .addbox-btn{align-self:flex-end;width:34px;height:34px;border-radius:7px;border:1.5px dashed var(--marigold);background:var(--marigold-soft);color:#95610F;font-size:20px;font-weight:700;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .addbox-btn:hover{background:var(--marigold);color:#2A1B03;}
+  input[type=number],input[type=date],input[type=text]{font-family:'Inter';font-size:13px;height:34px;border-radius:7px;border:1px solid var(--line);padding:0 10px;background:var(--paper);color:var(--ink);}
+  input:focus{outline:2px solid var(--marigold);outline-offset:1px;border-color:var(--marigold);}
+  .remark-wrap{margin-bottom:6px;}
+  .remark-wrap label{font-size:10.5px;color:var(--ink-faint);display:block;margin-bottom:3px;}
+  .remark-wrap input{width:100%;max-width:420px;}
+  .datefield{margin-top:8px;}
+  .datefield label{font-size:10.5px;color:var(--ink-faint);display:block;margin-bottom:3px;}
+  .datefield input{width:160px;}
+
+  .footer-bar{padding:16px 0 4px;}
+  .btn-combo{width:100%;height:44px;background:var(--marigold);color:#2A1B03;border:none;border-radius:9px;font-size:13.5px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;font-family:'Inter';}
+  .btn-combo:hover, .btn-combo:focus{background:#CC8A22;outline:2px solid var(--wine);outline-offset:2px;}
+  .btn-combo:disabled{opacity:0.6;cursor:wait;}
+  .synced{margin-top:7px;font-size:11px;color:var(--ink-faint);display:flex;align-items:center;justify-content:center;gap:5px;}
+  .party-lock{font-size:11px;color:var(--ink-faint);background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:7px 11px;margin-bottom:10px;display:flex;align-items:center;gap:6px;}
+  .party-lock b{color:var(--wine);}
+  .placeholder{color:var(--ink-faint);font-size:13px;padding:60px 20px;text-align:center;}
+
+  .list-head{padding:12px 14px 8px;border-bottom:1px solid var(--line);flex-shrink:0;}
+  .list-head-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+  .list-head h3{font-size:13px;font-weight:600;margin:0;}
+  .count{font-size:10.5px;color:var(--ink-faint);background:var(--paper);padding:2px 8px;border-radius:20px;}
+  .search-wrap{position:relative;}
+  .search-wrap svg{position:absolute;left:9px;top:50%;transform:translateY(-50%);color:var(--ink-faint);}
+  .search-wrap input{width:100%;padding-left:30px;height:34px;font-size:12.5px;}
+
+  .list-body{flex:1;overflow-y:auto;padding:6px;}
+  .row{display:flex;align-items:center;gap:8px;padding:7px 7px;border-radius:8px;cursor:pointer;margin-bottom:2px;border-left:3px solid transparent;transition:background .1s;}
+  .row:hover{background:var(--paper);}
+  .row.active{background:var(--marigold-soft);border-left-color:var(--marigold);}
+  .row.viewing{background:#F1EFF5;border-left-color:var(--ink-faint);}
+  .row.sameparty{background:#FFF9EE;border-left-color:#D9B876;}
+  .row.top-match{background:var(--teal-soft);border-left-color:var(--teal);}
+  .row.locked{opacity:0.4;}
+  .addbtn{width:23px;height:23px;border-radius:50%;border:1px solid var(--line);background:var(--paper);color:var(--ink-faint);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px;cursor:pointer;}
+  .addbtn.on{background:var(--plum);border-color:var(--plum);color:#fff;}
+  .addbtn.disabled{cursor:not-allowed;opacity:0.35;}
+  .row-mid{flex:1;min-width:0;}
+  .row-mid .pname{font-size:14.5px;font-weight:800;color:var(--teal);margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.35;}
+  .row-mid .desno{font-size:13.1px;font-weight:700;color:#D62828;margin:1px 0 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3;}
+  .row-mid .desno .sp{color:#95610F;font-weight:600;font-size:10px;margin-left:4px;}
+  .row-mid .raterow{font-size:12px;font-weight:800;color:var(--wine);margin:2px 0 0;}
+  .row-mid .raterow .rlbl{font-size:9px;font-weight:600;color:var(--ink-faint);text-transform:uppercase;letter-spacing:0.03em;margin-right:4px;}
+  .row-mid .meta2{font-size:10px;color:var(--ink-faint);margin:2px 0 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .row-od{font-size:10px;font-weight:700;padding:3px 8px;border-radius:20px;flex-shrink:0;}
+  .row-od.danger{background:var(--vermillion-soft);color:var(--vermillion);}
+  .row-od.orange{background:var(--orange-soft);color:var(--orange);}
+  .row-od.yellow{background:var(--gold-soft);color:var(--gold);}
+
+  .billno-field{display:flex;align-items:baseline;gap:5px;}
+  .billno-label{font-size:19px;font-weight:700;color:var(--wine);white-space:nowrap;}
+  .billno-input{width:76px;height:30px;font-size:17px;font-weight:700;font-family:'Space Grotesk',sans-serif;color:var(--wine);border:1px solid var(--line);border-radius:7px;padding:0 8px;background:var(--paper);}
+
+  .rate-order-split{display:flex;border:1px solid var(--line);border-radius:9px;overflow:hidden;margin:10px 0 6px;}
+  .rate-half{flex:1;padding:9px 12px;}
+  .rate-half:first-child{border-right:1px solid var(--line);background:var(--vermillion-soft);}
+  .rate-half:last-child{background:var(--gold-soft);}
+  .rate-half label{font-size:10px;text-transform:uppercase;letter-spacing:0.04em;font-weight:700;display:block;margin-bottom:4px;}
+  .rate-half:first-child label{color:var(--vermillion);}
+  .rate-half:last-child label{color:#8A6408;}
+  .rate-half input{width:100%;background:#fff;}
+  .rate-half .rv-display{font-size:16px;font-weight:800;color:#8A6408;}
+
+  .viewonly-hint{font-size:11px;color:var(--ink-faint);margin-top:8px;text-align:left;}
+
+  .oc-inner{position:relative;}
+  .oc-images{position:absolute;top:0;right:0;display:flex;gap:6px;z-index:2;}
+  .oc-img{width:96px;height:128px;object-fit:cover;border-radius:7px;cursor:zoom-in;display:block;}
+  .pending-img-label{font-size:11px;font-weight:700;color:var(--ink-faint);text-transform:uppercase;letter-spacing:0.05em;margin:16px 0 0;}
+  .pending-img-strip{display:flex;gap:14px;overflow-x:auto;padding:12px 2px 8px;margin-top:6px;-webkit-overflow-scrolling:touch;}
+  .pending-img{width:3in;height:4in;flex:0 0 auto;object-fit:cover;border-radius:10px;cursor:zoom-in;box-shadow:0 2px 10px rgba(0,0,0,0.10);border:1px solid var(--line);}
+
+  .viewonly-rate{background:#DEF3E4;border:1px solid rgba(0,0,0,0.05);border-radius:9px;padding:14px 16px;margin-top:2px;display:block;width:100%;}
+  .viewonly-rate .ol{font-size:11px;text-transform:uppercase;letter-spacing:0.04em;font-weight:700;color:#2C7A47;margin:0 0 4px;}
+  .viewonly-rate .ov{font-size:20px;font-weight:800;color:var(--ink);margin:0;}
+
+  .list-head{padding:12px 14px 8px;border-bottom:1px solid var(--line);flex-shrink:0;}
+  .list-head-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+  .list-head h3{font-size:13px;font-weight:600;margin:0;}
+  .count{font-size:10.5px;color:var(--ink-faint);background:var(--paper);padding:2px 8px;border-radius:20px;}
+
+  .page-pad{padding:22px 26px;overflow-y:auto;flex:1;}
+  .page-pad h2{font-size:18px;margin:0 0 4px;}
+  .page-pad .ph{font-size:12.5px;color:var(--ink-faint);margin:0 0 18px;}
+  .saved-list{display:flex;flex-direction:column;gap:22px;max-width:340px;}
+  .saved-card{background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden;box-shadow:0 2px 10px rgba(36,27,47,0.05);}
+  .saved-card img{width:100%;display:block;border-bottom:1px solid var(--line);cursor:zoom-in;}
+  .sc-meta{padding:10px 12px 4px;}
+  .sc-meta .scn{font-size:12.5px;font-weight:700;color:var(--wine);}
+  .sc-meta .scd{font-size:10.5px;color:var(--ink-faint);margin-top:1px;}
+  .sc-actions{display:flex;gap:6px;padding:10px 12px 12px;}
+  .sc-btn{flex:1;height:36px;border-radius:8px;border:none;font-size:11.5px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:5px;cursor:pointer;font-family:'Inter';}
+  .sc-btn.share{background:var(--teal-soft);color:var(--teal);}
+  .sc-btn.print{background:var(--paper);color:var(--ink-soft);border:1px solid var(--line);}
+  .sc-btn.pdf{background:var(--marigold-soft);color:#95610F;}
+  .empty-state{color:var(--ink-faint);font-size:13px;padding:30px 0;text-align:center;}
+  .settings-row{display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--line);max-width:520px;}
+  .settings-row .sl{font-size:13.5px;font-weight:500;}
+  .settings-row .sd{font-size:11.5px;color:var(--ink-faint);margin-top:2px;}
+  .settings-row input[type=text]{width:320px;}
+  .settings-btn{height:36px;padding:0 16px;background:var(--marigold);color:#2A1B03;border:none;border-radius:8px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:'Inter';}
+
+  .lightbox{position:fixed;inset:0;background:rgba(36,27,47,0.85);display:none;align-items:center;justify-content:center;z-index:80;cursor:zoom-out;padding:30px;}
+  .lightbox.open{display:flex;}
+  .lightbox img{max-width:92%;max-height:92%;border-radius:8px;box-shadow:0 20px 60px rgba(0,0,0,0.4);}
+
+  .dl-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px;}
+  .dl-btn{height:38px;padding:0 16px;background:var(--teal);color:#fff;border:none;border-radius:8px;font-size:12.5px;font-weight:600;display:flex;align-items:center;gap:6px;cursor:pointer;font-family:'Inter';}
+  .dl-sync-note{font-size:11px;color:var(--ink-faint);background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:8px 12px;margin-bottom:14px;display:flex;align-items:center;gap:6px;}
+  table.dl-table{width:100%;border-collapse:collapse;font-size:12px;}
+  table.dl-table th{background:var(--plum);color:#EDE9F2;text-align:left;padding:9px 10px;font-size:10.5px;text-transform:uppercase;letter-spacing:0.03em;position:sticky;top:0;}
+  table.dl-table td{padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap;}
+  table.dl-table tr:nth-child(even) td{background:var(--paper);}
+  .dl-wrap{overflow:auto;border:1px solid var(--line);border-radius:10px;flex:1;}
+
+  #printable{position:fixed;left:-9999px;top:0;width:794px;min-height:1123px;background:#fff;padding:44px 48px;font-family:'Inter';color:#241B2F;}
+  #printable .p-brand{display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid #241B2F;padding-bottom:14px;margin-bottom:20px;}
+  #printable .p-brand h2{font-family:'Space Grotesk';font-size:22px;margin:0;color:#83254F;}
+  #printable .p-brand .p-no{font-size:24px;font-weight:800;font-family:'Space Grotesk';background:none;color:#241B2F;padding:0;border-radius:0;}
+  #printable .p-sub{font-size:11px;color:#928C9E;margin-bottom:22px;}
+  /* Order content reuses the exact same classes as the live detail box
+     (oc-head/oc-party/oc-sr, oc-sub, rates/rate-chip, meta-line-top/stat-chip,
+     note-mini, order-sep) so the saved image is pixel-identical to what's
+     on screen — nothing here is duplicated or re-styled separately. */
+  #printable .order-card{padding:6px 0 18px;}
+  #printable .delivered-box{background:var(--teal-soft);border:1px solid var(--teal);border-radius:9px;padding:11px 14px;margin-bottom:10px;}
+  #printable .delivered-box.pcs{background:var(--marigold-soft);border-color:var(--marigold);}
+  #printable .delivered-box .dl{font-size:10.5px;text-transform:uppercase;letter-spacing:0.04em;color:var(--teal);font-weight:700;}
+  #printable .delivered-box.pcs .dl{color:#95610F;}
+  #printable .delivered-box .dv{font-size:17px;font-weight:800;margin-top:3px;color:var(--ink);}
+  #printable .remark-line{font-size:12px;color:var(--ink-soft);margin-top:6px;}
+  #printable.compact .order-card{padding:4px 0 12px;}
+  #printable.compact .oc-party{font-size:16.5px;}
+  #printable.compact .oc-sub{font-size:12.5px;margin-bottom:7px;}
+  #printable.compact .chip-des,#printable.compact .chip-fab{font-size:11.5px;padding:3px 9px;}
+  #printable.compact .chip-des{font-size:12.1px;}
+  #printable.compact .stat-chip .cv{font-size:13px;}
+  #printable.compact .delivered-box{padding:8px 12px;}
+  #printable.compact .delivered-box .dv{font-size:14px;}
+  #printable.compact .order-sep{margin:12px 0 10px;}
+  #printable .p-foot{margin-top:22px;border-top:1px solid #E7E2D9;padding-top:14px;font-size:10px;color:#928C9E;display:flex;justify-content:space-between;}
+
+  /* ===================== SHEET (pending orders, Google Sheet jaisa) ===================== */
+  .sheet-top{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 12px;flex-shrink:0;border-bottom:1px solid var(--line);background:var(--panel);}
+  .sheet-top h2{font-size:15px;margin:0;display:flex;align-items:center;gap:8px;}
+  .sheet-top input{width:220px;max-width:50%;height:32px;}
+  .sheet-wrap{flex:1;overflow:auto;min-height:0;background:#fff;-webkit-overflow-scrolling:touch;}
+  table.sheet{border-collapse:collapse;font-size:13px;width:max-content;min-width:calc(100% / 0.97);zoom:0.97;}   /* puri sheet 3% chhoti */
+  table.sheet th{background:#00FFFF;color:#000;font-weight:700;text-align:left;padding:7px 7px;border:1px solid #b7b7b7;position:sticky;top:0;z-index:2;white-space:nowrap;}
+  table.sheet th.jr{color:#E00000;}
+  table.sheet td{border:1px solid #d9d9d9;padding:5px 7px;white-space:nowrap;height:30px;color:#111;}
+  table.sheet td.b{font-weight:700;}
+  table.sheet td.ca{background:#3FB4C6;font-weight:700;text-align:center;}
+  table.sheet td.cb{background:#FFF2CC;}
+  table.sheet td.cd{background:#B6D7A8;}
+  table.sheet td.ce{background:#C9DAF8;min-width:190px;}
+  table.sheet td.cf{background:#FDEDC8;min-width:190px;}
+  table.sheet td.cg{background:#B7E1CD;}
+  table.sheet td.ci{background:#A4C2F4;font-size:15px;text-align:center;}
+  table.sheet td.cj{color:#E00000;font-weight:700;text-align:right;font-size:13.65px;}   /* rate text 5% bada */
+  /* FABRICS, OLD-RATE, DAYS L column: natural width ka 90% (10% patle). Text wrap hoke poora dikhta hai, kat'ta nahi. */
+  table.sheet.fit th:nth-child(6),table.sheet.fit td:nth-child(6),
+  table.sheet.fit th:nth-child(10),table.sheet.fit td:nth-child(10),
+  table.sheet.fit th:nth-child(11),table.sheet.fit td:nth-child(11){white-space:normal;overflow-wrap:anywhere;min-width:0;}
+  table.sheet.fit td.cf{min-width:0;}
+  table.sheet td.ck{background:#FF0000;font-weight:800;text-align:center;}
+  .sh-img{width:26px;height:34px;object-fit:cover;border-radius:3px;cursor:zoom-in;display:block;}
+
+  /* ===================== MOBILE / SMALL-SCREEN LAYOUT =====================
+     Below 900px the app switches from the tablet's fixed side-by-side
+     detail+list layout to a stacked, scrollable layout so it's usable on
+     a phone: the icon rail shrinks, the two panels stack vertically
+     instead of sitting side by side, and text/photo sizes scale down. */
+  @media (max-width: 900px){
+    .rail{width:46px;padding:10px 0;gap:10px;}
+    .rail .mark{width:26px;height:26px;font-size:11px;}
+    .rail .ricon{width:30px;height:30px;font-size:15px;}
+
+    .topbar{padding:0 12px;}
+    .topbar h1{font-size:13px;}
+    .clock{display:none;}
+
+    .stage{padding:8px 8px;gap:8px;}
+    .pbox{font-size:12px;padding:0 11px;height:28px;}
+
+    .split{flex-direction:column;gap:10px;overflow-y:auto;}
+    .detail{flex:none;}
+    .listpanel{flex:none;min-width:0;max-width:none;max-height:60vh;}
+
+    .detail-body{padding:12px 12px 20px;}
+
+    .oc-party{font-size:19px;}
+    .chip-des{font-size:13.65px;}
+    .chip-fab{font-size:12px;}
+    .meta-line-top .mi-orderno b{font-size:15px;}
+
+    .pending-img{width:2.2in;height:2.9in;}
+  }
+
+  @media (max-width: 560px){
+    .rail{flex-direction:row;width:100%;height:44px;padding:0 8px;gap:8px;overflow-x:auto;}
+    .shell{flex-direction:column;}
+    .main{min-height:0;flex:1;}
+
+    .strip{gap:5px 6px;}
+    .pbox{font-size:11px;padding:0 9px;height:26px;border-radius:8px;}
+
+    .oc-party{font-size:17px;}
+    .rates{flex-wrap:wrap;}
+    .meta-line-top{flex-wrap:wrap;gap:6px;}
+
+    .pending-img{width:2.6in;height:3.4in;}
+  }
+</style>
+</head>
+<body>
+
+<div class="shell">
+  <div class="rail">
+    <div class="mark">SO</div>
+    <div class="ricon active" data-view="sheet" title="Pending Sheet">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="15" y2="16"/></svg>
+    </div>
+    <div class="ricon" data-view="deliveries" title="Deliveries">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="3" width="15" height="13"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+    </div>
+    <div class="ricon" data-view="saved" title="Saved">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+    </div>
+    <div class="ricon" data-view="datalog" title="Data Log">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
+    </div>
+    <div class="ricon" data-view="settings" title="Settings">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="topbar">
+      <h1>SINDOOR ORDERS DISPATCH</h1>
+      <div class="topbar-right">
+        <span class="sync-pill demo" id="syncPill">demo mode</span>
+        <div class="clock" id="clock"></div>
+      </div>
+    </div>
+
+    <div class="view active" id="view-sheet">
+      <div class="sheet-top">
+        <h2>Pending Orders <span class="count" id="sheetCount"></span></h2>
+        <input id="sheetSearch" type="text" placeholder="Search party, design, order no..." oninput="renderSheet()" />
+      </div>
+      <div class="sheet-wrap">
+        <table class="sheet">
+          <thead><tr><th>1</th><th>OR DATE-</th><th>ORDER NO</th><th>DES NO-</th><th>PARTY NAME-</th><th>FABRICS-</th><th>PCS-</th><th>CUT-</th><th>MT-</th><th class="jr">OLD-RATE</th><th>DAYS L</th><th>COLOR NOTE-</th><th>P1</th><th>P2</th></tr></thead>
+          <tbody id="sheetBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="view" id="view-deliveries">
+      <div class="stage">
+        <div class="strip" id="strip"></div>
+        <div class="split">
+          <div class="panel detail"><div class="detail-body" id="detailBody"></div></div>
+          <div class="panel listpanel">
+            <div class="list-head">
+              <div class="list-head-top"><h3>All Orders</h3><span class="count" id="rowCount"></span></div>
+              <div class="search-wrap">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                <input id="searchBox" type="text" placeholder="Search SR no, party, design..." oninput="filterList()" />
+              </div>
+            </div>
+            <div class="list-body" id="orderList"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="view" id="view-saved">
+      <div class="page-pad">
+        <h2>Saved dispatches</h2>
+        <p class="ph">Every dispatch generated from Save gets a unique number here — tap the image to preview large, share, print, or download as PDF.</p>
+        <div id="savedList" class="saved-list"></div>
+        <div id="savedEmpty" class="empty-state">No dispatches saved yet — generate one from the Deliveries screen.</div>
+      </div>
+    </div>
+
+    <div class="view" id="view-datalog">
+      <div class="page-pad" style="display:flex;flex-direction:column;">
+        <div class="dl-top">
+          <div>
+            <h2 style="margin-bottom:2px;">Data log</h2>
+            <p class="ph" style="margin-bottom:0;">Row-wise record of every delivery, keyed by SR No.</p>
+          </div>
+          <button class="dl-btn" onclick="downloadCsv()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            download as excel (csv)
+          </button>
+        </div>
+        <div class="dl-sync-note">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><polyline points="21 3 21 9 15 9"/></svg>
+          <span id="dlSyncNoteText">Rows are keyed by SR No and written to SALE-data on Save — this table mirrors what's been sent so far.</span>
+        </div>
+        <div class="dl-wrap">
+          <table class="dl-table" id="dlTable">
+            <thead><tr><th>SR No</th><th>Party</th><th>Design No</th><th>Fabric</th><th>Delivered qty</th><th>Type</th><th>Rate</th><th>Delivery date</th><th>Bill No</th><th>Saved at</th></tr></thead>
+            <tbody id="dlBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="view" id="view-settings">
+      <div class="page-pad">
+        <h2>Settings</h2>
+        <p class="ph">Connect this app to your live Google Sheet.</p>
+        <div class="settings-row">
+          <div><div class="sl">Apps Script Web App URL</div><div class="sd">Paste the deployed /exec URL from Extensions &rarr; Apps Script &rarr; Deploy</div></div>
+        </div>
+        <div class="settings-row" style="border-top:none;padding-top:0;">
+          <input id="webAppUrlInput" type="text" placeholder="https://script.google.com/macros/s/XXXXX/exec" />
+          <button class="settings-btn" onclick="saveWebAppUrl()">connect</button>
+        </div>
+        <div class="settings-row"><div><div class="sl">Connected sheet</div><div class="sd">SINDOOR ORDERFORM &middot; Sheet1 (read-only) + SALE-data (append)</div></div></div>
+        <div class="settings-row"><div><div class="sl">Sync mode</div><div class="sd">Live fetch on load — falls back to demo data if unreachable</div></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="lightbox" class="lightbox" onclick="closeLightbox()"><img id="lightboxImg" src="" /></div>
+
+<div id="printable">
+  <div class="p-brand"><h2>Sindoor Orders Dispatch</h2><span class="p-no" id="pNo"></span></div>
+  <div class="p-sub" id="pDate"></div>
+  <div id="pBody"></div>
+  <div class="p-foot"><span>Generated on tablet/PC app</span><span>Sindoor Orderform</span></div>
+</div>
+
+<script>
+/* ============================================================
+   CONFIG — connect to your real Google Sheet here
+   ============================================================
+   1. Deploy Code.gs as a Web App (Deploy -> New deployment -> Web app
+      -> Execute as: Me -> Who has access: Anyone).
+   2. Copy the /exec URL it gives you.
+   3. Paste it below OR type it into the Settings page in the app —
+      either way it's saved and used from then on.
+   ============================================================ */
+let WEB_APP_URL = ""; // <-- paste your deployed Apps Script URL here, or set it from Settings
+
+const DEMO_ROWS = [
+  { sr: 503, date: "22/07/2026", orderNo: 503, des: "817", party: "Handloom Cottege", fabric: "Natural Crape 44\"", pcs: 4, cut: "50", mt: 200, oldRate: 720, orderRate: 700, saleRate: 730, jobKhata: "JK-01", note: "" },
+  { sr: 511, date: "22/07/2026", orderNo: 511, des: "P-81736", party: "J R Exports", fabric: "Natural Crape 44\"", pcs: 4, cut: "20-25", mt: 90, oldRate: 660, orderRate: 640, saleRate: 675, jobKhata: "JK-02", note: "Creap chart-141,136,169,151 (plain colours)." },
+  { sr: 5111, date: "22/07/2026", orderNo: 511, des: "Sw-209", party: "J R Exports", fabric: "Creap Position Print", pcs: 5, cut: "20-25", mt: 113, oldRate: 480, orderRate: 460, saleRate: 490, jobKhata: "JK-02", note: "", imgO: "https://picsum.photos/seed/sindoor5111o/300/400" },
+  { sr: 513, date: "23/07/2026", orderNo: 513, des: "Af-838", party: "Madhav Exports", fabric: "Creap Position Print", pcs: 5, cut: "20-25", mt: 113, oldRate: 480, orderRate: 460, saleRate: 490, jobKhata: "JK-03", note: "" },
+  { sr: 516, date: "24/07/2026", orderNo: 516, des: "P-31002", party: "Mehak Emporium", fabric: "Natural Crape 44\"", pcs: 1, cut: "19", mt: 19, oldRate: 675, orderRate: 660, saleRate: 690, jobKhata: "JK-04", note: "", imgO: "https://picsum.photos/seed/sindoor516o/300/400", imgP: "https://picsum.photos/seed/sindoor516p/300/400", imgQ: "https://picsum.photos/seed/sindoor516q/300/400" },
+  { sr: 518, date: "27/07/2026", orderNo: 518, des: "RR-118", party: "RR & Sons", fabric: "Tissu jari 44\"", pcs: 1, cut: "17", mt: 17, oldRate: 560, orderRate: 545, saleRate: 570, jobKhata: "JK-05", note: "" },
+  { sr: 522, date: "27/07/2026", orderNo: 522, des: "PR-S0407 big", party: "Paras Gallery", fabric: "Dola Silk", pcs: 1, cut: "27", mt: 27, oldRate: 470, orderRate: 455, saleRate: 480, jobKhata: "JK-06", note: "" },
+  { sr: 5221, date: "27/07/2026", orderNo: 522, des: "PF-630", party: "Paras Gallery", fabric: "Tissu cc", pcs: 3, cut: "25.25", mt: 75.5, oldRate: 730, orderRate: 720, saleRate: 745, jobKhata: "JK-06", note: "" },
+  { sr: 525, date: "28/07/2026", orderNo: 525, des: "IV-22", party: "Istri Vastra Pvt Ltd", fabric: "Salsa 44\"", pcs: 5, cut: "20-25", mt: 113, oldRate: 300, orderRate: 285, saleRate: 310, jobKhata: "JK-07", note: "" },
+  { sr: 532, date: "30/07/2026", orderNo: 532, des: "RT-14", party: "Rang Tarang Fabrics", fabric: "Viscose georgett 44\"", pcs: 2, cut: "27", mt: 54, oldRate: 350, orderRate: 335, saleRate: 360, jobKhata: "JK-08", note: "" },
+  { sr: 533, date: "31/07/2026", orderNo: 533, des: "LC-9", party: "Lavi Creation", fabric: "Kanjiwaram", pcs: 1, cut: "18", mt: 18, oldRate: 590, orderRate: 575, saleRate: 605, jobKhata: "JK-09", note: "" },
+  { sr: 534, date: "31/07/2026", orderNo: 534, des: "KB-51", party: "Kunika Lace & Boutique", fabric: "Nett", pcs: 6, cut: "20-25", mt: 120, oldRate: 260, orderRate: 245, saleRate: 270, jobKhata: "JK-10", note: "" }
+];
+
+let rows = [];
+let stack = [];
+let viewedSr = null;
+let savedReceipts = [];
+let dataLogRows = [];
+let offlineQueue = [];
+let dispatchCounter = 1000;
+const MAX_LOCAL_AGE_MS = 30 * 24 * 60 * 60 * 1000; // 1 month
+
+// Formats an order date into DD-MM-YYYY, whichever incoming format it's in
+// (ISO "2026-07-22T18:30:00.000Z" or already "23/07/2026").
+function formatOrderDate(d){
+  if (!d) return "";
+  const s = String(d);
+  const isoMatch = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (isoMatch) return `${isoMatch[3]}-${isoMatch[2]}-${isoMatch[1]}`;
+  const slashMatch = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (slashMatch) return `${slashMatch[1].padStart(2,"0")}-${slashMatch[2].padStart(2,"0")}-${slashMatch[3]}`;
+  return s;
+}
+
+function classify(pcs){ return pcs > 25 ? { label: "PCS · 1 box", cls: "pcs" } : { label: "MTR · " + pcs + " box" + (pcs > 1 ? "es" : ""), cls: "mtr" }; }
+function odClass(days){ return days >= 50 ? "danger" : days >= 30 ? "orange" : "yellow"; }
+function focalSr(){ return stack.length ? stack[0] : viewedSr; }
+function focalParty(){
+  const sr = focalSr();
+  if (sr == null) return null;
+  const found = rows.find(r => r.sr === sr);
+  return found ? found.party : null;
+}
+function daysBetween(dateStr){
+  const parts = String(dateStr).split(/[\/\-]/);
+  if (parts.length !== 3) return 0;
+  const d = new Date(parts[2].length === 4 ? parts[2]+"-"+parts[1]+"-"+parts[0] : dateStr);
+  if (isNaN(d)) return 0;
+  return Math.max(0, Math.round((Date.now() - d.getTime()) / 86400000));
+}
+
+/* -------- Row normalizer: reads the FIXED columns the backend guarantees
+   (obj._fixed), not header text — header text in the live sheet can be
+   missing/inconsistent (e.g. column A has no "SR NO" label), so we never
+   rely on guessing it from header names. For the O/P/Q image links we
+   check every alias we've seen backends use (inside _fixed AND on the
+   raw row itself) since we can't see the Apps Script that produces this
+   JSON — if it isn't sending the column at all under ANY of these keys,
+   no frontend change can make the image appear (see note in chat). -------- */
+function pick(...vals){
+  for (const v of vals){ if (v !== undefined && v !== null && v !== "") return v; }
+  return "";
+}
+function normalizeSheetRow(o){
+  const f = o._fixed || {};
+  return {
+    sr: f.sr === 0 ? 0 : (f.sr || ""),
+    date: f.date || "",
+    orderNo: f.orderNo || "",
+    des: f.des || "",
+    party: f.party || "",
+    fabric: f.fabric || "",
+    pcs: Number(f.pcs) || 0,
+    cut: f.cut || "",
+    mt: Number(f.mt) || 0,
+    oldRate: Number(f.oldRate) || 0,
+    orderRate: Number(f.orderRate) || 0,
+    saleRate: Number(f.saleRate) || 0,
+    jobKhata: f.jobKhata || "",
+    note: f.note || "",
+    // Image links from Sheet1 columns O through V (P1..P8, all optional) —
+    // tries every alias we can think of, in _fixed first, then on the raw row.
+    imgO: pick(f.imgO, f.img_o, f.imageO, f.o, f.O, o.imgO, o.img_o, o.o, o.O),
+    imgP: pick(f.imgP, f.img_p, f.imageP, f.p, f.P, o.imgP, o.img_p, o.p, o.P),
+    imgQ: pick(f.imgQ, f.img_q, f.imageQ, f.q, f.Q, o.imgQ, o.img_q, o.q, o.Q),
+    imgR: pick(f.imgR, f.img_r, f.imageR, f.r, f.R, o.imgR, o.img_r, o.r, o.R),
+    imgS: pick(f.imgS, f.img_s, f.imageS, f.s, f.S, o.imgS, o.img_s, o.s, o.S),
+    imgT: pick(f.imgT, f.img_t, f.imageT, f.t, f.T, o.imgT, o.img_t, o.t, o.T),
+    imgU: pick(f.imgU, f.img_u, f.imageU, f.u, f.U, o.imgU, o.img_u, o.u, o.U),
+    imgV: pick(f.imgV, f.img_v, f.imageV, f.v, f.V, o.imgV, o.img_v, o.v, o.V)
+  };
+}
+
+/* -------- Image slot logic for the read-only detail view --------
+   Up to 8 photo links can come from Sheet1 columns O through V
+   (P1..P8). All present links are shown left-to-right, in column
+   order, in a horizontally scrollable strip below "order rate".
+   Empty slots render nothing at all — no placeholder box or border. */
+function imageSlotsForRow(r){
+  return [r.imgO, r.imgP, r.imgQ, r.imgR, r.imgS, r.imgT, r.imgU, r.imgV].filter(Boolean);
+}
+
+/* Builds the order-card markup for a delivered line — reuses the exact
+   same classes as the live detail box (oc-head/oc-party, oc-sub, rates,
+   meta-line-top/stat-chip, note-mini) so the saved JPG/PDF is visually
+   identical to what's shown on screen, not a separate re-styled copy. */
+function buildOrderCardMarkup(r, deliveredText, isPcs, rateVal){
+  return `
+    <div class="oc-inner">
+      ${r.imgO ? `<div class="oc-images"><img src="${r.imgO}" class="oc-img" /></div>` : ""}
+      <div class="oc-head">
+        <p class="oc-party">${r.party}</p>
+        <span class="oc-sr tabular">SR #${r.sr}</span>
+      </div>
+      <div class="oc-designfab"><span class="chip-des"><span class="dno-label">D.NO-</span>${r.des}</span><span class="chip-fab">${r.fabric}</span></div>
+      <div class="rates">
+        <div class="rate-chip y"><p class="rl">old rate</p><p class="rv tabular">${r.oldRate ? "₹"+r.oldRate : "—"}</p></div>
+        <div class="rate-chip r"><p class="rl">sale rate</p><p class="rv tabular">${r.saleRate ? "₹"+r.saleRate : "—"}</p></div>
+      </div>
+      <div class="meta-line-top">
+        <span class="mi mi-orderno">order no <b>${r.orderNo}</b></span>
+        <span class="mi">order date <b>${formatOrderDate(r.date)}</b></span>
+        <span class="stat-chip pcs"><span class="cl">pcs</span><span class="cv tabular">${r.pcs}</span></span>
+        <span class="stat-chip cut"><span class="cl">cut</span><span class="cv tabular">${r.cut}</span></span>
+        <span class="stat-chip mtr"><span class="cl">mtr</span><span class="cv tabular">${r.mt}</span></span>
+      </div>
+      ${r.note ? `<div class="note-mini"><b>Color note</b>${r.note}</div>` : ""}
+      <div class="delivered-box ${isPcs ? 'pcs' : ''}">
+        <div class="dl">delivered — ${isPcs ? "pcs" : "mtr"}</div>
+        <div class="dv">${deliveredText}</div>
+      </div>
+      <div class="rate-order-split">
+        <div class="rate-half"><label>rate</label><div class="rv-display">${rateVal ? "₹"+rateVal : "—"}</div></div>
+        <div class="rate-half"><label>order rate</label><div class="rv-display">${r.orderRate ? "₹"+r.orderRate : "—"}</div></div>
+      </div>
+    </div>
+  `;
+}
+
+/* -------- Local persistence: keeps Saved/Data-log visible across refresh,
+   with a rolling 1-month window — anything older is dropped automatically
+   so the device's localStorage never grows without bound. -------- */
+function persistLocal(){
+  try{
+    localStorage.setItem("sindoorSavedReceipts", JSON.stringify(savedReceipts));
+    localStorage.setItem("sindoorDataLog", JSON.stringify(dataLogRows));
+    localStorage.setItem("sindoorOfflineQueue", JSON.stringify(offlineQueue));
+    localStorage.setItem("sindoorDispatchCounter", String(dispatchCounter));
+  } catch(e){
+    console.warn("Local save skipped (storage full):", e);
+  }
+}
+function purgeOld(list){
+  const now = Date.now();
+  return (list || []).filter(item => !item.ts || (now - item.ts) < MAX_LOCAL_AGE_MS);
+}
+function loadLocalCache(){
+  try{
+    const sr = localStorage.getItem("sindoorSavedReceipts");
+    const dl = localStorage.getItem("sindoorDataLog");
+    const oq = localStorage.getItem("sindoorOfflineQueue");
+    const dc = localStorage.getItem("sindoorDispatchCounter");
+    if (sr) savedReceipts = purgeOld(JSON.parse(sr));
+    if (dl) dataLogRows = purgeOld(JSON.parse(dl));
+    if (oq) offlineQueue = purgeOld(JSON.parse(oq));
+    if (dc) dispatchCounter = Math.max(dispatchCounter, Number(dc) || 0);
+    persistLocal(); // write back the purged versions
+  } catch(e){ /* ignore corrupt cache */ }
+}
+
+/* -------- Rebuild Saved page + Data Log from the sheet itself (AR column) —
+   this is what makes any device opening the app show the SAME data,
+   because SALE-data is the source of truth, not just this browser's cache.
+   Performance: dispatch groups that are already rendered locally (same
+   bill no) reuse their cached image instead of re-running html2canvas,
+   so re-opening the app with many saved dispatches stays fast — only
+   genuinely new bills get rendered. -------- */
+async function loadSavedFromSheet(){
+  if (!WEB_APP_URL) return;
+  try{
+    const res = await fetch(WEB_APP_URL + "?action=getSaved");
+    const json = await res.json();
+    if (!json.ok) return;
+    const records = json.rows; // each is a full JSON record written at save-time
+
+    const groups = {};
+    records.forEach(rec => {
+      const key = rec.dispatchNo || rec.sr;
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(rec);
+    });
+
+    const existingByNo = new Map(savedReceipts.map(s => [String(s.no), s]));
+    const rebuilt = [];
+    const rebuiltLog = [];
+    const dispatchNos = Object.keys(groups).sort((a,b) => Number(b) - Number(a));
+
+    for (const dNo of dispatchNos){
+      const group = groups[dNo];
+
+      // Data log always rebuilt (cheap) so it stays in sync with the sheet
+      group.forEach(rec => {
+        const isPcs = Number(rec.pcs) > 25;
+        rebuiltLog.push({
+          sr: rec.sr, party: rec.party, des: rec.des, fabric: rec.fabric,
+          deliveredQty: isPcs ? rec.total : (rec.boxValues || []).join("+"),
+          type: isPcs ? "PCS" : "MTR", rate: rec.rate, date: rec.deliveryDate,
+          dispatchNo: dNo, savedAt: rec.savedAt ? new Date(rec.savedAt).toLocaleString('en-IN') : "",
+          ts: rec.savedAt || Date.now()
+        });
+      });
+
+      // Image: reuse cached render for already-known bills, only regenerate for new ones
+      if (existingByNo.has(String(dNo))){
+        rebuilt.push(existingByNo.get(String(dNo)));
+        continue;
+      }
+
+      const printable = document.getElementById("printable");
+      const pBody = document.getElementById("pBody");
+      document.getElementById("pNo").textContent = "Bill No-" + dNo;
+      document.getElementById("pDate").textContent = "Generated " + (group[0].savedAt ? new Date(group[0].savedAt).toLocaleString('en-IN') : "");
+      pBody.innerHTML = "";
+      printable.classList.toggle("compact", group.length >= 3);
+
+      group.forEach((rec, i) => {
+        const isPcs = Number(rec.pcs) > 25;
+        const deliveredText = isPcs
+          ? rec.total + " pcs (1 box)"
+          : (rec.boxValues || []).join(" + ") + " = " + rec.total + " mtr";
+
+        if (i > 0){
+          const sep = document.createElement("div");
+          sep.className = "order-sep";
+          sep.innerHTML = `<span class="num">${i+1}</span><span class="oline"></span><span class="lbl">order ${i+1} of ${group.length}</span><span class="oline"></span>`;
+          pBody.appendChild(sep);
+        }
+        const card = document.createElement("div");
+        card.className = "order-card";
+        card.innerHTML = buildOrderCardMarkup(rec, deliveredText, isPcs, rec.rate);
+        pBody.appendChild(card);
+      });
+
+      const canvas = await html2canvas(printable, { scale: 2 });
+      rebuilt.push({
+        no: dNo, url: canvas.toDataURL("image/jpeg", 0.92),
+        when: group[0].savedAt ? new Date(group[0].savedAt).toLocaleString('en-IN') : "",
+        count: group.length,
+        ts: group[0].savedAt || Date.now()
+      });
+    }
+
+    savedReceipts = rebuilt;
+    dataLogRows = rebuiltLog;
+    const maxDispatch = dispatchNos.length ? Math.max(...dispatchNos.map(Number)) : 0;
+    dispatchCounter = Math.max(dispatchCounter, maxDispatch + 1);
+    persistLocal();
+    renderSaved();
+    renderDataLog();
+  } catch(err){
+    console.error("Could not rebuild Saved page from sheet — keeping local copy:", err);
+  }
+}
+async function loadData(){
+  const pill = document.getElementById("syncPill");
+  const storedUrl = localStorage.getItem("sindoorWebAppUrl");
+  if (storedUrl && !WEB_APP_URL) WEB_APP_URL = storedUrl;
+
+  if (!WEB_APP_URL){
+    rows = DEMO_ROWS.slice();
+    pill.textContent = "demo mode";
+    pill.className = "sync-pill demo";
+    finishLoad();
+    return;
+  }
+
+  pill.textContent = "connecting...";
+  pill.className = "sync-pill demo";
+  try{
+    const res = await fetch(WEB_APP_URL + "?action=getPending");
+    const json = await res.json();
+    if (!json.ok) throw new Error(json.error || "Unknown error");
+    rows = json.rows.map(normalizeSheetRow).filter(r => r.sr !== "" && r.sr != null);
+    pill.textContent = "live · " + rows.length + " pending";
+    pill.className = "sync-pill live";
+    try{ localStorage.setItem("sindoorCachedRows", JSON.stringify({ ts: Date.now(), rows })); } catch(e){}
+  } catch(err){
+    console.error(err);
+    let cached = null;
+    try{
+      const raw = localStorage.getItem("sindoorCachedRows");
+      if (raw){
+        const parsed = JSON.parse(raw);
+        if (parsed && parsed.rows && (Date.now() - (parsed.ts||0)) < MAX_LOCAL_AGE_MS) cached = parsed.rows;
+      }
+    } catch(e){}
+    if (cached){
+      rows = cached;
+      pill.textContent = "offline · showing last saved data";
+      pill.className = "sync-pill err";
+    } else {
+      rows = DEMO_ROWS.slice();
+      pill.textContent = "connection failed — demo data";
+      pill.className = "sync-pill err";
+    }
+  }
+  finishLoad();
+}
+
+function finishLoad(){
+  stack = [];
+  viewedSr = rows.length ? rows[0].sr : null;
+  const maxSr = rows.length ? Math.max(...rows.map(r => Number(r.sr) || 0)) : 1000;
+  dispatchCounter = Math.max(dispatchCounter, maxSr + 1);
+  renderStrip();
+  renderDetail();
+  renderList(currentFiltered());
+  renderSheet();
+  syncOfflineQueue();
+}
+
+function saveWebAppUrl(){
+  const val = document.getElementById("webAppUrlInput").value.trim();
+  if (!val) return;
+  WEB_APP_URL = val;
+  localStorage.setItem("sindoorWebAppUrl", val);
+  loadData().then(() => { loadSavedFromSheet(); syncOfflineQueue(); });
+  document.querySelector('.rail .ricon[data-view="deliveries"]').click();
+}
+
+/* -------- Offline queue: if a save couldn't reach the sheet (no network,
+   server down, etc.) the payload is kept here and retried automatically —
+   on load, whenever the browser comes back online, and every 60s while
+   the app stays open. Entries older than 1 month are dropped like the
+   rest of local storage (see MAX_LOCAL_AGE_MS / purgeOld). -------- */
+async function syncOfflineQueue(){
+  if (!WEB_APP_URL || !offlineQueue.length) return;
+  const pill = document.getElementById("syncPill");
+  const remaining = [];
+  let synced = 0;
+  for (const item of offlineQueue){
+    try{
+      await fetch(WEB_APP_URL, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify({ action: "saveDelivery", data: item.payload })
+      });
+      synced++;
+    } catch(e){
+      remaining.push(item);
+    }
+  }
+  offlineQueue = remaining;
+  persistLocal();
+  if (synced > 0 && pill){
+    pill.textContent = "synced " + synced + " queued item" + (synced>1?"s":"");
+    pill.className = "sync-pill live";
+  }
+}
+window.addEventListener("online", syncOfflineQueue);
+setInterval(syncOfflineQueue, 60000);
+
+/* -------- Nav -------- */
+document.querySelectorAll(".rail .ricon").forEach(el => {
+  el.onclick = () => {
+    document.querySelectorAll(".rail .ricon").forEach(x => x.classList.remove("active"));
+    el.classList.add("active");
+    document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
+    document.getElementById("view-" + el.dataset.view).classList.add("active");
+    if (el.dataset.view === "sheet") fitSheetCols();
+  };
+});
+
+/* -------- Overdue strip -------- */
+function renderStrip(){
+  const strip = document.getElementById("strip");
+  strip.innerHTML = "";
+  // Har pending party ek baar (spelling ke extra space / capital ka farak ignore), sabse zyada overdue pehle.
+  const keyOf = (n) => String(n || "").trim().replace(/\s+/g, " ").toLowerCase();
+  const byParty = new Map();
+  rows.forEach(r => {
+    const od = daysBetween(r.date);
+    const k = keyOf(r.party);
+    const cur = byParty.get(k);
+    if (!cur || od > cur.overdue) byParty.set(k, { party: String(r.party || "").trim() || "(party naam nahi)", sr: r.sr, overdue: od });
+  });
+  const parties = [...byParty.values()].sort((a,b) => b.overdue - a.overdue);
+  parties.forEach((p, i) => {
+    const box = document.createElement("div");
+    box.className = "pbox c" + (i % 6);
+    box.textContent = p.party;
+    box.title = p.party;
+    box.onclick = () => { stack = []; viewedSr = p.sr; renderDetail(); renderList(currentFiltered()); };
+    strip.appendChild(box);
+  });
+}
+
+function currentFiltered(){
+  const q = (document.getElementById("searchBox").value || "").trim().toLowerCase();
+  const bySr = [...rows].sort((a,b) => (Number(a.sr)||0) - (Number(b.sr)||0));   // SR no ke hisab se: 5, 8, 12...
+  const has = (v) => String(v == null ? "" : v).toLowerCase().includes(q);
+
+  if (q){
+    // party / SR se match -> puri party upar; design / fabric / rate se match -> wahi rows upar.
+    const partyHit = new Set();
+    const rowHit = new Set();
+    rows.forEach(r => {
+      if (has(r.sr) || has(r.party)) partyHit.add(r.party);
+      if (has(r.des) || has(r.fabric) || has(r.orderRate) || has(r.oldRate) || has(r.saleRate)) rowHit.add(r.sr);
+    });
+    const isTop = r => partyHit.has(r.party) || rowHit.has(r.sr);
+    const top = bySr.filter(isTop);
+    if (!top.length) return { ordered: [], matchSrs: new Set(), topParties: new Set() };
+    const rest = bySr.filter(r => !isTop(r));
+    const matchSrs = new Set(top.filter(r => has(r.sr) || rowHit.has(r.sr)).map(r => r.sr));
+    return { ordered: [...top, ...rest], matchSrs, topParties: partyHit };
+  }
+
+  // Search nahi: agar koi order/party selected hai to us party ke saare order upar (SR order me), baaki neeche (SR order me).
+  const fp = focalParty();
+  if (fp){
+    const same = bySr.filter(r => r.party === fp);
+    const rest = bySr.filter(r => r.party !== fp);
+    return { ordered: [...same, ...rest], matchSrs: new Set(), topParties: new Set() };
+  }
+  return { ordered: bySr, matchSrs: new Set(), topParties: new Set() };
+}
+
+function renderList(result){
+  const list = document.getElementById("orderList");
+  document.getElementById("rowCount").textContent = rows.length + " rows";
+  list.innerHTML = "";
+  const primaryParty = focalParty();
+  result.ordered.forEach(r => {
+    const inStack = stack.includes(r.sr);
+    const isViewedOnly = !inStack && viewedSr === r.sr && stack.length === 0;
+    const isTopMatch = result.matchSrs.has(r.sr);
+    const sameAsMatch = result.topParties.has(r.party) && !isTopMatch;
+    const sameAsStack = result.topParties.size === 0 && result.matchSrs.size === 0 && primaryParty && r.party === primaryParty && !inStack && !isViewedOnly;
+    const locked = primaryParty && r.party !== primaryParty && !inStack;
+    let cls = "row";
+    if (inStack) cls += " active";
+    else if (isViewedOnly) cls += " viewing";
+    else if (isTopMatch) cls += " top-match";
+    else if (sameAsMatch || sameAsStack) cls += " sameparty";
+    if (locked) cls += " locked";
+    const odc = odClass(daysBetween(r.date));
+
+    const row = document.createElement("div");
+    row.className = cls;
+    row.innerHTML = `
+      <button class="addbtn ${inStack ? 'on' : ''} ${locked ? 'disabled' : ''}" title="${locked ? 'Ek dispatch me sirf ek party ke orders' : 'Add for delivery entry'}">
+        ${inStack ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>'
+                   : '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>'}
+      </button>
+      <div class="row-mid">
+        <p class="pname">${r.party}</p>
+        <p class="desno"><span class="dno-label">D.NO-</span>${r.des}${(sameAsMatch||sameAsStack) ? ' <span class="sp">same party</span>' : ''}</p>
+        <p class="raterow"><span class="rlbl">order rate</span>${r.orderRate ? "₹"+r.orderRate : "—"}</p>
+        <p class="meta2">#${r.sr} &middot; ${r.fabric}</p>
+      </div>
+      <span class="row-od ${odc}">${daysBetween(r.date)}d</span>
+    `;
+    row.querySelector(".addbtn").onclick = (e) => { e.stopPropagation(); toggleStack(r.sr); };
+    row.onclick = () => { if (stack.length === 0) { viewedSr = r.sr; renderDetail(); renderList(currentFiltered()); } };
+    list.appendChild(row);
+  });
+}
+function filterList(){ renderList(currentFiltered()); }
+
+/* -------- Pending sheet: Google Sheet (Sheet1) jaisa table, SR ke order me.
+   K column = din (order date se aaj tak) minus sign ke saath, jaise sheet me -12. -------- */
+/* FABRICS (6), OLD-RATE (10), DAYS L (11): pehle natural width naapo, phir uska 90% laga do. */
+function fitSheetCols(){
+  const tbl = document.querySelector("table.sheet");
+  if (!tbl || !tbl.tHead) return;
+  const ths = tbl.tHead.rows[0].cells;
+  const cols = [5, 9, 10];
+  tbl.classList.remove("fit");
+  cols.forEach(i => { ths[i].style.width = ""; });
+  const nat = cols.map(i => ths[i].offsetWidth);
+  if (nat.some(w => !w)) return;   // sheet page chhupa hai, dikhne par dobara chalega
+  cols.forEach((i, k) => { ths[i].style.width = Math.round(nat[k] * 0.9) + "px"; });
+  tbl.classList.add("fit");
+}
+
+function renderSheet(){
+  const q = (document.getElementById("sheetSearch").value || "").trim().toLowerCase();
+  const esc = s => String(s == null ? "" : s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/"/g,"&quot;");
+  const list = [...rows]
+    .sort((a,b) => (Number(a.sr)||0) - (Number(b.sr)||0))
+    .filter(r => !q || [r.sr, r.orderNo, r.des, r.party, r.fabric, r.note].some(v => String(v == null ? "" : v).toLowerCase().includes(q)));
+  document.getElementById("sheetCount").textContent = list.length + " pending";
+  const c = (cls, v) => { v = (v === 0 || v == null) ? "" : v; return `<td class="${v !== "" ? cls : ""}">${esc(v)}</td>`; };
+  const img = u => u ? `<td><img class="sh-img" loading="lazy" decoding="async" src="${esc(u)}" onclick="openLightbox(this.src)" /></td>` : "<td></td>";
+  document.getElementById("sheetBody").innerHTML = list.map(r => {
+    const d = daysBetween(r.date);
+    return `<tr><td class="ca">${esc(r.sr)}</td><td class="cb">${esc(formatOrderDate(r.date).replace(/-/g,"/"))}</td><td class="cb b">${esc(r.orderNo)}</td>${c("cd b", r.des)}${c("ce b", r.party)}${c("cf", r.fabric)}${c("cg", r.pcs)}${c("cg", r.cut)}${c("ci b", r.mt)}<td class="cj">${r.oldRate ? "₹" + esc(r.oldRate) : ""}</td><td class="ck">${d ? -d : 0}</td>${c("cg", r.note)}${img(r.imgO)}${img(r.imgP)}</tr>`;
+  }).join("");
+  fitSheetCols();
+}
+
+function toggleStack(sr){
+  const idx = stack.indexOf(sr);
+  if (idx >= 0){
+    stack.splice(idx,1);
+    if (stack.length === 0) viewedSr = sr;
+  } else {
+    const newRow = rows.find(r => r.sr === sr);
+    if (!newRow) return;
+    const primaryParty = focalParty();
+    if (primaryParty && newRow.party !== primaryParty) return;
+    stack.push(sr);
+    viewedSr = sr;
+  }
+  renderDetail();
+  renderList(currentFiltered());
+}
+
+function bindBoxKey(inp){
+  inp.addEventListener("keydown", (e) => {
+    if (e.key !== "Enter") return;
+    e.preventDefault();
+    const all = Array.from(document.querySelectorAll('#detailBody .entry-h-wrap input'));
+    const next = all[all.indexOf(inp) + 1];
+    if (next) next.focus();
+    else {
+      const saveBtn = document.getElementById("saveBtn");
+      if (saveBtn) saveBtn.focus();
+    }
+  });
+}
+function renumberBoxes(wrap){
+  let n = 0;
+  wrap.querySelectorAll(".entry-h-item").forEach(item => {
+    n++;
+    const tag = item.querySelector(".tag");
+    if (tag) tag.textContent = "box " + n;
+  });
+}
+// "+" dabane par ek naya manual MTR box: number bhi likh sakte ho aur text bhi.
+function addManualBox(btn, uid){
+  const wrap = btn.parentElement;
+  const item = document.createElement("div");
+  item.className = "entry-h-item";
+  item.innerHTML = `<span class="tag"></span><input type="text" class="manual" placeholder="mt / text" autocomplete="off" /><button type="button" class="rm" title="Ye box hatao">&times;</button>`;
+  const inp = item.querySelector("input");
+  inp.setAttribute("data-uid", uid);
+  item.querySelector(".rm").onclick = () => { item.remove(); renumberBoxes(wrap); };
+  wrap.insertBefore(item, btn);
+  renumberBoxes(wrap);
+  bindBoxKey(inp);
+  inp.focus();
+}
+
+function buildEntryHtml(r, uid){
+  const isPcs = r.pcs > 25;
+  const count = isPcs ? 1 : (r.pcs || 1);
+  let html = `<p class="entry-label">${isPcs ? "Total pcs delivered (1 box)" : "Mtr per box — press enter for next"}</p><div class="entry-h-wrap">`;
+  for (let i = 1; i <= count; i++){
+    html += `<div class="entry-h-item"><span class="tag">${isPcs ? "pcs" : "box "+i}</span><input type="number" data-uid="${uid}" placeholder="${isPcs ? "30" : "mt"}" /></div>`;
+  }
+  if (!isPcs) html += `<button type="button" class="addbox-btn" title="Manual box add (number ya text)" onclick="addManualBox(this, ${JSON.stringify(String(uid)).replace(/"/g, '&quot;')})">+</button>`;
+  html += `</div>`;
+  html += `<div class="rate-order-split">
+    <div class="rate-half"><label>rate</label><input type="number" id="rateinput-${uid}" placeholder="rate" /></div>
+    <div class="rate-half"><label>order rate</label><div class="rv-display">${r.orderRate ? "₹"+r.orderRate : "—"}</div></div>
+  </div>`;
+  html += `<div class="datefield"><label>delivery date</label><input type="date" id="date-${uid}" /></div>`;
+  return html;
+}
+
+function renderReadOnlyCard(r){
+  const imgs = imageSlotsForRow(r);
+  const imagesHtml = imgs.length
+    ? `<p class="pending-img-label">Photos</p><div class="pending-img-strip">${imgs.map(u => `<img src="${u}" class="pending-img" onclick="event.stopPropagation();openLightbox('${u}')" />`).join("")}</div>`
+    : "";
+  return `
+    <div class="oc-inner">
+      <div class="oc-head"><p class="oc-party">${r.party}</p><span class="oc-sr tabular">SR #${r.sr}</span></div>
+      <div class="oc-designfab"><span class="chip-des"><span class="dno-label">D.NO-</span>${r.des}</span><span class="chip-fab">${r.fabric}</span></div>
+      <div class="rates">
+        <div class="rate-chip y"><p class="rl">old rate</p><p class="rv tabular">${r.oldRate ? "₹"+r.oldRate : "—"}</p></div>
+        <div class="rate-chip r"><p class="rl">sale rate</p><p class="rv tabular">${r.saleRate ? "₹"+r.saleRate : "—"}</p></div>
+      </div>
+      <div class="meta-line-top">
+        <span class="mi mi-orderno">order no <b>${r.orderNo}</b></span>
+        <span class="mi">order date <b>${formatOrderDate(r.date)}</b></span>
+        <span class="stat-chip pcs"><span class="cl">pcs</span><span class="cv tabular">${r.pcs}</span></span>
+        <span class="stat-chip cut"><span class="cl">cut</span><span class="cv tabular">${r.cut}</span></span>
+        <span class="stat-chip mtr"><span class="cl">mtr</span><span class="cv tabular">${r.mt}</span></span>
+      </div>
+      ${r.note ? `<div class="note-mini"><b>Color note</b>${r.note}</div>` : ""}
+      <div class="viewonly-rate"><p class="ol">order rate</p><p class="ov tabular">${r.orderRate ? "₹"+r.orderRate : "—"}</p></div>
+      ${imagesHtml}
+      <div class="viewonly-hint">Tap + in the list on the right to open delivery entry for this order.</div>
+    </div>
+  `;
+}
+
+function renderDetail(){
+  const body = document.getElementById("detailBody");
+  body.innerHTML = "";
+
+  if (stack.length === 0 && viewedSr == null){
+    body.innerHTML = `<div class="placeholder">Select an order from the list to begin a dispatch.</div>`;
+    return;
+  }
+
+  if (stack.length === 0){
+    const r = rows.find(x => x.sr === viewedSr);
+    if (!r){ body.innerHTML = `<div class="placeholder">Select an order from the list to begin a dispatch.</div>`; return; }
+    const card = document.createElement("div");
+    card.className = "order-card";
+    card.innerHTML = renderReadOnlyCard(r);
+    body.appendChild(card);
+    return;
+  }
+
+  const primaryParty = focalParty();
+  if (stack.length > 1){
+    const lock = document.createElement("div");
+    lock.className = "party-lock";
+    lock.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Only <b>${primaryParty}</b> orders can be added to this dispatch`;
+    body.appendChild(lock);
+  }
+
+  stack.forEach((sr, i) => {
+    const r = rows.find(x => x.sr === sr);
+    if (!r) return;
+
+    if (i > 0){
+      const sep = document.createElement("div");
+      sep.className = "order-sep";
+      sep.innerHTML = `<span class="num">${i+1}</span><span class="oline"></span><span class="lbl">order ${i+1} of ${stack.length}</span><span class="oline"></span>`;
+      body.appendChild(sep);
+    }
+
+    const card = document.createElement("div");
+    card.className = "order-card";
+    card.innerHTML = `
+      <div class="oc-inner">
+        <div class="oc-head">
+          <p class="oc-party">${r.party}</p>
+          ${i === 0 ? `<div class="billno-field"><span class="billno-label">Bill No-</span><input type="number" class="billno-input tabular" id="billNoInput" value="${dispatchCounter}" /></div>` : ""}
+          <span class="oc-sr tabular">SR #${r.sr}</span>
+        </div>
+        <div class="oc-designfab"><span class="chip-des"><span class="dno-label">D.NO-</span>${r.des}</span><span class="chip-fab">${r.fabric}</span></div>
+
+        <div class="rates">
+          <div class="rate-chip y"><p class="rl">old rate</p><p class="rv tabular">${r.oldRate ? "₹"+r.oldRate : "—"}</p></div>
+          <div class="rate-chip r"><p class="rl">sale rate</p><p class="rv tabular">${r.saleRate ? "₹"+r.saleRate : "—"}</p></div>
+        </div>
+
+        <div class="meta-line-top">
+          <span class="mi mi-orderno">order no <b>${r.orderNo}</b></span>
+          <span class="mi">order date <b>${formatOrderDate(r.date)}</b></span>
+          <span class="stat-chip pcs"><span class="cl">pcs</span><span class="cv tabular">${r.pcs}</span></span>
+          <span class="stat-chip cut"><span class="cl">cut</span><span class="cv tabular">${r.cut}</span></span>
+          <span class="stat-chip mtr"><span class="cl">mtr</span><span class="cv tabular">${r.mt}</span></span>
+        </div>
+
+        ${r.note ? `<div class="note-mini"><b>Color note</b>${r.note}</div>` : ""}
+
+        ${buildEntryHtml(r, sr)}
+      </div>
+    `;
+    body.appendChild(card);
+  });
+
+  const footer = document.createElement("div");
+  footer.className = "footer-bar";
+  footer.innerHTML = `
+    <button class="btn-combo" id="saveBtn" onclick="generateReceipt()">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+      save
+    </button>
+    <div class="synced" id="syncedNote">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><polyline points="21 3 21 9 15 9"/></svg>
+      saved locally, syncing in background
+    </div>
+  `;
+  body.appendChild(footer);
+
+  Array.from(body.querySelectorAll('.entry-h-wrap input')).forEach(bindBoxKey);
+  const saveBtnEl = document.getElementById("saveBtn");
+  if (saveBtnEl){
+    saveBtnEl.addEventListener("keydown", (e) => {
+      if (e.key === "Enter"){ e.preventDefault(); generateReceipt(); }
+    });
+  }
+
+  body.querySelectorAll("input[type=date]").forEach(d => { if(!d.value) d.value = new Date().toISOString().split("T")[0]; });
+
+  setTimeout(() => {
+    const first = body.querySelector('.entry-h-wrap input');
+    if (first) first.focus();
+  }, 60);
+}
+
+/* -------- Save: generate receipt + push to SALE-data (live or demo).
+   The bill number now comes from the editable "Bill No-" field on the
+   first order card (pre-filled with last saved bill + 1, but the user
+   can type any number) instead of a silent auto-increment. -------- */
+async function generateReceipt(){
+  const saveBtn = document.getElementById("saveBtn");
+  if (saveBtn){ saveBtn.disabled = true; }
+
+  const billNoField = document.getElementById("billNoInput");
+  const dispatchNo = billNoField ? (Number(billNoField.value) || dispatchCounter) : dispatchCounter;
+  dispatchCounter = dispatchNo + 1;
+
+  const printable = document.getElementById("printable");
+  const pBody = document.getElementById("pBody");
+  document.getElementById("pNo").textContent = "Bill No-" + dispatchNo;
+  document.getElementById("pDate").textContent = "Generated " + new Date().toLocaleString('en-IN');
+  pBody.innerHTML = "";
+  printable.classList.toggle("compact", stack.length >= 3);
+
+  const pendingSaves = [];
+  const nowTs = Date.now();
+
+  stack.forEach((sr, i) => {
+    const r = rows.find(x => x.sr === sr);
+    const boxEls = Array.from(document.querySelectorAll(`.entry-h-wrap input[data-uid="${sr}"]`))
+      .filter(el => !(el.classList.contains("manual") && el.value.trim() === ""));
+    // Manual box me text bhi ho sakta hai: total me pehla number ginte hain, receipt me jo likha wahi dikhta hai.
+    const numOf = (v) => { const m = String(v).replace(/,/g, ".").match(/-?\d+(\.\d+)?/); return m ? parseFloat(m[0]) : 0; };
+    const inputs = boxEls.map(el => el.classList.contains("manual") ? numOf(el.value) : (Number(el.value) || 0));
+    const texts = boxEls.map(el => el.classList.contains("manual") ? el.value.trim() : String(Number(el.value) || 0));
+    const total = inputs.reduce((s,v) => s+v, 0);
+    const rateVal = Number(document.getElementById("rateinput-"+sr).value) || 0;
+    const dateVal = document.getElementById("date-"+sr).value;
+    const isPcs = r.pcs > 25;
+
+    if (i > 0){
+      const sep = document.createElement("div");
+      sep.className = "order-sep";
+      sep.innerHTML = `<span class="num">${i+1}</span><span class="oline"></span><span class="lbl">order ${i+1} of ${stack.length}</span><span class="oline"></span>`;
+      pBody.appendChild(sep);
+    }
+
+    const deliveredText = isPcs
+      ? total + " pcs (1 box)"
+      : texts.join(" + ") + " = " + total + " mtr";
+
+    const div = document.createElement("div");
+    div.className = "order-card";
+    div.innerHTML = buildOrderCardMarkup(r, deliveredText, isPcs, rateVal);
+    pBody.appendChild(div);
+
+    dataLogRows.unshift({
+      sr: r.sr, party: r.party, des: r.des, fabric: r.fabric,
+      deliveredQty: isPcs ? total : texts.join("+"),
+      type: isPcs ? "PCS" : "MTR",
+      rate: rateVal, date: dateVal, dispatchNo: dispatchNo,
+      savedAt: new Date().toLocaleString('en-IN'), ts: nowTs
+    });
+
+    pendingSaves.push({
+      sr: r.sr, orderDate: r.date, party: r.party, des: r.des, fabric: r.fabric,
+      pcs: r.pcs, cut: r.cut, mt: r.mt,
+      oldRate: r.oldRate, orderRate: r.orderRate, saleRate: r.saleRate,
+      note: r.note, orderNo: r.orderNo,
+      total: total, boxValues: inputs, boxTexts: texts,
+      rate: rateVal, deliveryDate: dateVal, dispatchNo: dispatchNo
+    });
+  });
+
+  if (WEB_APP_URL){
+    for (const payload of pendingSaves){
+      try{
+        await fetch(WEB_APP_URL, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify({ action: "saveDelivery", data: payload })
+        });
+      } catch(err){
+        console.warn("Sync to SALE-data failed, queued for background retry:", err);
+        offlineQueue.push({ payload, ts: nowTs });
+      }
+    }
+  }
+
+  html2canvas(printable, { scale: 2 }).then(canvas => {
+    const dataUrl = canvas.toDataURL("image/jpeg", 0.92);
+    savedReceipts.unshift({ no: dispatchNo, url: dataUrl, when: new Date().toLocaleString('en-IN'), count: stack.length, ts: nowTs });
+    stack = [];
+    viewedSr = null;
+    persistLocal();
+    renderSaved();
+    renderDataLog();
+    if (saveBtn) saveBtn.disabled = false;
+    if (offlineQueue.length) syncOfflineQueue();
+    // Refresh the pending list from the sheet right away, so an order that
+    // is now fully delivered (and removed server-side) stops showing up
+    // here immediately instead of only after the next manual reload.
+    if (WEB_APP_URL) loadData();
+    document.querySelector('.rail .ricon[data-view="saved"]').click();
+  });
+}
+
+function renderSaved(){
+  const list = document.getElementById("savedList");
+  const empty = document.getElementById("savedEmpty");
+  list.innerHTML = "";
+  empty.style.display = savedReceipts.length ? "none" : "block";
+  savedReceipts.forEach((s, idx) => {
+    const card = document.createElement("div");
+    card.className = "saved-card";
+    card.innerHTML = `
+      <img src="${s.url}" data-idx="${idx}" />
+      <div class="sc-meta"><div class="scn">Bill No-${s.no}</div><div class="scd">${s.count} order${s.count>1?"s":""} &middot; ${s.when}</div></div>
+      <div class="sc-actions">
+        <button class="sc-btn share" data-idx="${idx}">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8a3 3 0 1 0-2.83-4H15a3 3 0 0 0 .05 2.06L8.09 9.81a3 3 0 1 0 0 4.38l6.96 3.75A3 3 0 1 0 16 16v-.09l-6.96-3.75a3 3 0 0 0 0-1.32L16 7.09c.31.14.65.22 1 .22a3 3 0 0 0 1-.09Z"/></svg>
+          share
+        </button>
+        <button class="sc-btn print" data-idx="${idx}">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+          print
+        </button>
+        <button class="sc-btn pdf" data-idx="${idx}">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><polyline points="14 2 14 8 20 8"/></svg>
+          pdf
+        </button>
+      </div>
+    `;
+    list.appendChild(card);
+  });
+  list.querySelectorAll(".saved-card img").forEach(img => img.onclick = () => openLightbox(img.src));
+  list.querySelectorAll(".sc-btn.share").forEach(b => b.onclick = () => shareReceipt(Number(b.dataset.idx)));
+  list.querySelectorAll(".sc-btn.print").forEach(b => b.onclick = () => printReceipt(Number(b.dataset.idx)));
+  list.querySelectorAll(".sc-btn.pdf").forEach(b => b.onclick = () => pdfReceipt(Number(b.dataset.idx)));
+}
+
+function openLightbox(url){ document.getElementById("lightboxImg").src = url; document.getElementById("lightbox").classList.add("open"); }
+function closeLightbox(){ document.getElementById("lightbox").classList.remove("open"); }
+
+function renderDataLog(){
+  const tbody = document.getElementById("dlBody");
+  tbody.innerHTML = "";
+  dataLogRows.forEach(r => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td>${r.sr}</td><td>${r.party}</td><td style="color:#D62828;font-weight:700">${r.des}</td><td>${r.fabric}</td><td>${r.deliveredQty}</td><td>${r.type}</td><td>${r.rate != null && r.rate !== "" ? "₹"+r.rate : "—"}</td><td>${r.date}</td><td>Bill No-${r.dispatchNo}</td><td>${r.savedAt}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+function downloadCsv(){
+  const headers = ["SR NO","PARTY","DESIGN NO","FABRIC","DELIVERED QTY","TYPE","RATE","DELIVERY DATE","BILL NO","SAVED AT"];
+  const lines = [headers.join(",")];
+  dataLogRows.forEach(r => {
+    const vals = [r.sr, r.party, r.des, r.fabric, r.deliveredQty, r.type, r.rate, r.date, r.dispatchNo, r.savedAt];
+    lines.push(vals.map(v => '"' + String(v == null ? "" : v).replace(/"/g,'""') + '"').join(","));
+  });
+  const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = "sindoor-dispatch-log.csv"; a.click();
+  URL.revokeObjectURL(url);
+}
+
+async function shareReceipt(idx){
+  const s = savedReceipts[idx];
+  try{
+    const res = await fetch(s.url);
+    const blob = await res.blob();
+    const file = new File([blob], "bill-" + s.no + ".jpg", { type: "image/jpeg" });
+    if (navigator.canShare && navigator.canShare({ files: [file] })){
+      await navigator.share({ files: [file], title: "Bill No-" + s.no, text: "Sindoor Orders Dispatch — Bill No-" + s.no });
+      return;
+    }
+  } catch(e){}
+  window.open("https://wa.me/?text=" + encodeURIComponent("Bill No-" + s.no + " ready — image saved on device, attach and send on WhatsApp."), "_blank");
+}
+
+function printReceipt(idx){
+  const s = savedReceipts[idx];
+  const w = window.open("", "_blank");
+  if (!w){
+    alert("Popup blocked by the browser. Please allow popups for this site to print, or use the PDF button instead.");
+    return;
+  }
+  // @page size:A4 + a height-capped image guarantees the whole bill prints
+  // on a single page, however tall the content is — it just scales down.
+  w.document.write(`<html><head><title>Bill No-${s.no}</title><style>
+    @page{ size:A4; margin:0; }
+    html,body{ margin:0; height:100%; }
+    body{ display:flex; align-items:flex-start; justify-content:center; }
+    img{ width:auto; height:100vh; max-width:100%; object-fit:contain; }
+  </style></head><body><img src="${s.url}" onload="window.print()"/></body></html>`);
+  w.document.close();
+}
+
+function pdfReceipt(idx){
+  const s = savedReceipts[idx];
+  const img = new Image();
+  img.onload = () => {
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ unit: "mm", format: "a4" });
+    const pageW = pdf.internal.pageSize.getWidth();
+    const pageH = pdf.internal.pageSize.getHeight();
+    const ratio = img.height / img.width;
+    // Fit within BOTH width and height so one bill always stays one page —
+    // scale by width first, then shrink further if that overflows the page height.
+    let w = pageW, h = pageW * ratio;
+    if (h > pageH){ h = pageH; w = pageH / ratio; }
+    const x = (pageW - w) / 2;
+    pdf.addImage(img, "JPEG", x, 0, w, h);
+    pdf.save("bill-" + s.no + ".pdf");
+  };
+  img.src = s.url;
+}
+
+function tickClock(){
+  const d = new Date();
+  document.getElementById("clock").textContent = d.toLocaleDateString('en-IN',{day:'2-digit',month:'short'}) + " · " + d.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
+}
+tickClock(); setInterval(tickClock, 30000);
+
+const storedUrlForSettings = localStorage.getItem("sindoorWebAppUrl");
+if (storedUrlForSettings) document.getElementById("webAppUrlInput").value = storedUrlForSettings;
+
+loadLocalCache();
+renderSaved();
+renderDataLog();
+loadData().then(() => { loadSavedFromSheet(); });
+window.addEventListener("load", fitSheetCols);
+</script>
+</body>
+</html>
